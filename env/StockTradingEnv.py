@@ -32,112 +32,113 @@ class StockTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0, high=1, shape=(6, 6), dtype=np.float16)
 
-    def _nextObservation(self):
+    def _next_observation(self):
         # Get the stock data points for the last 5 days and scale to between 0-1
         frame = np.array([
-            self.df.loc[self.currentStep: self.currentStep +
+            self.df.loc[self.current_step: self.current_step +
                         5, 'Open'].values / MAX_SHARE_PRICE,
-            self.df.loc[self.currentStep: self.currentStep +
+            self.df.loc[self.current_step: self.current_step +
                         5, 'High'].values / MAX_SHARE_PRICE,
-            self.df.loc[self.currentStep: self.currentStep +
+            self.df.loc[self.current_step: self.current_step +
                         5, 'Low'].values / MAX_SHARE_PRICE,
-            self.df.loc[self.currentStep: self.currentStep +
+            self.df.loc[self.current_step: self.current_step +
                         5, 'Close'].values / MAX_SHARE_PRICE,
-            self.df.loc[self.currentStep: self.currentStep +
+            self.df.loc[self.current_step: self.current_step +
                         5, 'Volume'].values / MAX_NUM_SHARES,
         ])
 
         # Append additional data and scale each value to between 0-1
         obs = np.append(frame, [[
             self.balance / MAX_ACCOUNT_BALANCE,
-            self.maxNetWorth / MAX_ACCOUNT_BALANCE,
-            self.sharesHeld / MAX_NUM_SHARES,
-            self.averageShareCost / MAX_SHARE_PRICE,
-            self.totalSharesSold / MAX_NUM_SHARES,
-            self.totalSalesValue / (MAX_NUM_SHARES * MAX_SHARE_PRICE),
+            self.max_net_worth / MAX_ACCOUNT_BALANCE,
+            self.shares_held / MAX_NUM_SHARES,
+            self.cost_basis / MAX_SHARE_PRICE,
+            self.total_shares_sold / MAX_NUM_SHARES,
+            self.total_sales_value / (MAX_NUM_SHARES * MAX_SHARE_PRICE),
         ]], axis=0)
 
         return obs
 
-    def _takeAction(self, action):
-        currentPrice = random.uniform(
-            self.df.loc[self.currentStep, "Open"], self.df.loc[self.currentStep, "Close"])
+    def _take_action(self, action):
+        # Set the current price to a round price within the time step
+        current_price = random.uniform(
+            self.df.loc[self.current_step, "Open"], self.df.loc[self.current_step, "Close"])
 
-        actionType = action[0]
+        action_type = action[0]
         amount = action[1]
 
-        if actionType < 1:
-            # buy amount * self.balance
-            totalPossible = self.balance / currentPrice
-            sharesBought = totalPossible * amount
-            prevAvgShareCost = self.averageShareCost * self.sharesHeld
-            avgAdditionalCost = sharesBought * currentPrice
+        if action_type < 1:
+            # Buy amount % of balance in shares
+            total_possible = int(self.balance / current_price)
+            shares_bought = int(total_possible * amount)
+            prev_cost_basis = self.cost_basis * self.shares_held
+            additional_cost = shares_bought * current_price
 
-            self.balance -= sharesBought * currentPrice
-            self.averageShareCost = (
-                prevAvgShareCost + avgAdditionalCost) / (self.sharesHeld + sharesBought)
-            self.sharesHeld += sharesBought
+            self.balance -= additional_cost
+            self.cost_basis = (
+                prev_cost_basis + additional_cost) / (self.shares_held + shares_bought)
+            self.shares_held += shares_bought
 
-        elif actionType < 2:
-            # sell amount * self.sharesHeld
-            sharesSold = self.sharesHeld * amount
-            self.balance += sharesSold * currentPrice
-            self.sharesHeld -= sharesSold
-            self.totalSharesSold += sharesSold
-            self.totalSalesValue += sharesSold * currentPrice
+        elif action_type < 2:
+            # Sell amount % of shares held
+            shares_sold = int(self.shares_held * amount)
+            self.balance += shares_sold * current_price
+            self.shares_held -= shares_sold
+            self.total_shares_sold += shares_sold
+            self.total_sales_value += shares_sold * current_price
 
-        netWorth = self.balance + self.sharesHeld * currentPrice
+        self.net_worth = self.balance + self.shares_held * current_price
 
-        if netWorth > self.maxNetWorth:
-            self.maxNetWorth = netWorth
+        if self.net_worth > self.max_net_worth:
+            self.max_net_worth = self.net_worth
 
-        if self.sharesHeld == 0:
-            self.averageShareCost = 0
+        if self.shares_held == 0:
+            self.cost_basis = 0
 
     def step(self, action):
         # Execute one time step within the environment
-        self._takeAction(action)
+        self._take_action(action)
 
-        self.currentStep += 1
+        self.current_step += 1
 
-        if self.currentStep > len(self.df.loc[:, 'Open'].values) - 6:
-            self.currentStep = 0
+        if self.current_step > len(self.df.loc[:, 'Open'].values) - 6:
+            self.current_step = 0
 
-        delayModifier = (self.currentStep / MAX_STEPS)
+        delay_modifier = (self.current_step / MAX_STEPS)
 
-        reward = self.balance * delayModifier
-        done = self.balance <= 0 or self.balance > MAX_ACCOUNT_BALANCE
+        reward = self.balance * delay_modifier
+        done = self.net_worth <= 0
 
-        obs = self._nextObservation()
+        obs = self._next_observation()
 
         return obs, reward, done, {}
 
     def reset(self):
         # Reset the state of the environment to an initial state
         self.balance = INITIAL_ACCOUNT_BALANCE
-        self.maxNetWorth = INITIAL_ACCOUNT_BALANCE
-        self.sharesHeld = 0
-        self.averageShareCost = 0
-        self.totalSharesSold = 0
-        self.totalSalesValue = 0
+        self.net_worth = INITIAL_ACCOUNT_BALANCE
+        self.max_net_worth = INITIAL_ACCOUNT_BALANCE
+        self.shares_held = 0
+        self.cost_basis = 0
+        self.total_shares_sold = 0
+        self.total_sales_value = 0
 
         # Set the current step to a random point within the data frame
-        self.currentStep = random.randint(
+        self.current_step = random.randint(
             0, len(self.df.loc[:, 'Open'].values) - 6)
 
-        return self._nextObservation()
+        return self._next_observation()
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen
-        currentPrice = self.df.loc[self.currentStep, "Open"]
-        netWorth = self.balance + self.sharesHeld * currentPrice
-        profit = netWorth - INITIAL_ACCOUNT_BALANCE
+        profit = self.net_worth - INITIAL_ACCOUNT_BALANCE
 
-        print(f'Step: {self.currentStep}')
+        print(f'Step: {self.current_step}')
         print(f'Balance: {self.balance}')
         print(
-            f'Shares held: {self.sharesHeld} (Total sold: {self.totalSharesSold})')
+            f'Shares held: {self.shares_held} (Total sold: {self.total_shares_sold})')
         print(
-            f'Avg cost for held shares: {self.averageShareCost} (Total sales value: {self.totalSalesValue})')
-        print(f'Net worth: {netWorth} (Max net worth: {self.maxNetWorth})')
+            f'Avg cost for held shares: {self.cost_basis} (Total sales value: {self.total_sales_value})')
+        print(
+            f'Net worth: {self.net_worth} (Max net worth: {self.max_net_worth})')
         print(f'Profit: {profit}')
