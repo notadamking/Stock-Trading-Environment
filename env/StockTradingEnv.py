@@ -60,7 +60,7 @@ class StockTradingEnv(gym.Env):
         return obs
 
     def _take_action(self, action):
-        # Set the current price to a round price within the time step
+        # Set the current price to a random price within the time step
         current_price = random.uniform(
             self.df.loc[self.current_step, "Open"], self.df.loc[self.current_step, "Close"])
 
@@ -71,12 +71,12 @@ class StockTradingEnv(gym.Env):
             # Buy amount % of balance in shares
             total_possible = int(self.balance / current_price)
             shares_bought = int(total_possible * amount)
-            prev_cost_basis = self.cost_basis * self.shares_held
+            prev_cost = self.cost_basis * self.shares_held
             additional_cost = shares_bought * current_price
 
             self.balance -= additional_cost
             self.cost_basis = (
-                prev_cost_basis + additional_cost) / (self.shares_held + shares_bought)
+                prev_cost + additional_cost) / (self.shares_held + shares_bought)
             self.shares_held += shares_bought
 
         elif action_type < 2:
