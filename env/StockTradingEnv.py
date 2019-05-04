@@ -133,12 +133,9 @@ class StockTradingEnv(gym.Env):
         # Render the environment to the screen
         profit = self.net_worth - INITIAL_ACCOUNT_BALANCE
 
-        print(f'Step: {self.current_step}')
-        print(f'Balance: {self.balance}')
-        print(
-            f'Shares held: {self.shares_held} (Total sold: {self.total_shares_sold})')
-        print(
-            f'Avg cost for held shares: {self.cost_basis} (Total sales value: {self.total_sales_value})')
-        print(
-            f'Net worth: {self.net_worth} (Max net worth: {self.max_net_worth})')
-        print(f'Profit: {profit}')
+        print('Step: {0}'.format(self.current_step))
+        print('Balance: {0}'.format(self.balance))
+        print('Shares held: {0} (Total sold: {1})'.format(self.shares_held,self.total_shares_sold))
+        print('Avg cost for held shares: {0} (Total sales value: {1})'.format(self.cost_basis,self.total_sales_value))
+        print('Net worth: {0} (Max net worth: {1})'.format(self.net_worth,self.max_net_worth))
+        print('Profit: {0}'.format(profit))
