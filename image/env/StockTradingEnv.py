@@ -104,7 +104,7 @@ class StockTradingEnv(gym.Env):
         if self.current_step > len(self.df.loc[:, 'Open'].values) - 6:
             self.current_step = 0
 
-        delay_modifier = (self.current_step / MAX_STEPS)
+        delay_modifier = (self.current_step / MAX_STEPS)**self.current_step
 
         reward = self.balance * delay_modifier
         done = self.net_worth <= 0
@@ -133,12 +133,12 @@ class StockTradingEnv(gym.Env):
         # Render the environment to the screen
         profit = self.net_worth - INITIAL_ACCOUNT_BALANCE
 
-        print(f'Step: {self.current_step}')
-        print(f'Balance: {self.balance}')
+        print('Step: ' + str(self.current_step))
+        print('Balance: ' + str(self.balance))
         print(
-            f'Shares held: {self.shares_held} (Total sold: {self.total_shares_sold})')
+            'Shares held: ' + str(self.shares_held) + ' (Total sold: ' + str(self.total_shares_sold) + ')')
         print(
-            f'Avg cost for held shares: {self.cost_basis} (Total sales value: {self.total_sales_value})')
+            'Avg cost for held shares: ' + str(self.cost_basis) + ' (Total sales value: ' + str(self.total_sales_value) + ')')
         print(
-            f'Net worth: {self.net_worth} (Max net worth: {self.max_net_worth})')
-        print(f'Profit: {profit}')
+            'Net worth: ' + str(self.net_worth) + ' (Max net worth: ' + str(self.max_net_worth) + ')')
+        print('Profit: ' + str(profit) + '\n')
