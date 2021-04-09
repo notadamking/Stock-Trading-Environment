@@ -1,2 +1,0 @@
-#!/bin/bash
-docker run --rm -it rl-stocks
